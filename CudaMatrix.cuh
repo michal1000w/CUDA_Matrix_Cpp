@@ -34,22 +34,26 @@ void dotKernel(Y* a, Y* b, Y* c, yeet m, yeet n, yeet k) {
     yeet row = blockIdx.y * blockDim.y + threadIdx.y;
     yeet col = blockIdx.x * blockDim.x + threadIdx.x;
     Y sum = 0;
-    if (col < k && row < m)
-    {
-        for (yeet i = 0; i < n; i++)
-        {
+    if (col < k && row < m) {
+        for (yeet i = 0; i < n; i++) {
             sum += a[row * n + i] * b[i * k + col];
         }
         c[row * k + col] = sum;
     }
 }
 
+template <typename Y>
+__global__
+void transposeKernel(Y* mat_in, Y* mat_out, yeet rows, yeet cols) {
+    yeet idx = blockIdx.x * blockDim.x + threadIdx.x;
+    yeet idy = blockIdx.y * blockDim.y + threadIdx.y;
 
-
-
-
-
-
+    if (idx < cols && idy < rows) {
+        yeet pos = idy * cols + idx;
+        yeet trans_pos = idx * rows + idy;
+        mat_out[trans_pos] = mat_in[pos];
+    }
+}
 
 
 //////////////////////////////////////////////////CLASS////////////////////////////////////////////////////////
@@ -461,7 +465,7 @@ Matrix<Y> Matrix<Y>::dot(const Matrix<Y>& rhs) {
 
     Y* host_a = this->_data;
     Y* host_b = rhs._data;
-    Y* host_c;
+    Y* host_c = new Y[total_size_c];
     yeet m = this->_rows;
     yeet n = this->_cols;
     yeet k = rhs._cols;
@@ -517,6 +521,64 @@ Matrix<Y> Matrix<Y>::dot(const Matrix<Y>& rhs) {
 
     //create output Matrix
     Matrix<Y> C(this->_rows, rhs._cols, host_c);
+
+    return C;
+}
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::T() {
+    //variables
+    cudaError_t cudaStatus;
+    unsigned int total_size = size() * sizeof(Y);
+
+    Y* host_a = this->_data;
+    Y* host_c = new Y[size()];
+
+    Y* dev_a;
+    Y* dev_c;
+
+    //set the device
+    cudaStatus = cudaSetDevice(0);
+    if (cudaStatus != cudaSuccess) cout << "Setting device failed" << endl;
+
+    //allocate memory
+    cudaStatus = cudaMalloc((void**)&dev_a, total_size);
+    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [a]" << endl;
+    cudaStatus = cudaMalloc((void**)&dev_c, total_size);
+    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [c]" << endl;
+
+    //copy vectors to GPU
+    cudaStatus = cudaMemcpy(dev_a, host_a, total_size, cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) cout << "Copying to device failed [a]" << endl;
+
+    //launch kernel
+    dim3 threads(THREADS_PER_BLOCK, THREADS_PER_BLOCK);
+    dim3 grid((size() - 1) / THREADS_PER_BLOCK + 1, (size() - 1) / THREADS_PER_BLOCK + 1);
+    transposeKernel << <grid,threads>> > (dev_a, dev_c, this->_rows,this->_cols);
+
+    //check if errors
+    cudaStatus = cudaGetLastError();
+    if (cudaStatus != cudaSuccess) cout << "Launching kernel failed [dot]" << endl;
+
+
+    //synchronize devices
+    cudaStatus = cudaDeviceSynchronize();
+    if (cudaStatus != cudaSuccess) cout << "Synchronizing failed" << endl;
+
+    //copy output to host
+    cudaStatus = cudaMemcpy(host_c, dev_c, total_size, cudaMemcpyDeviceToHost);
+    if (cudaStatus != cudaSuccess) cout << "Copying to host failed\n" << cudaStatus << endl;
+
+    //free memory
+    cudaFree(dev_a);
+    cudaFree(dev_c);
+
+    //reset the device
+    cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
+
+    //create output Matrix
+    Matrix<Y> C(this->_cols, this->_rows, host_c);
 
     return C;
 }

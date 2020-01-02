@@ -114,9 +114,12 @@ int main() {
     cout << endl << endl;
     */
     mat.add("[1,2,3]");
-    mat2.add("[1,0][0,2][3,0]");
+    mat2.add("[1,0][2,2][3,0]");
 
-    mat.dot(mat2).print();
+    mat = mat.dot(mat2) * 5;
+    mat.print();
+    cout << endl;
+    mat.T().print();
 
 
     return 0;
