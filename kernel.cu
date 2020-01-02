@@ -1,4 +1,5 @@
-#include "CUDA_Class.cuh"
+//#include "CUDA_Class.cuh"
+#include "CudaMatrix.cuh"
 
 
 
@@ -19,6 +20,7 @@ void printArray(float* a, unsigned int size) {
 }
 
 int main() {
+    /*
     unsigned int size = 5; //5
     float* a = new float[size];
     float* b = new float[size];
@@ -67,6 +69,29 @@ int main() {
     //subtract constant
     cu.csubtract(a, 1, size);
     printArray(a, size);
+    */
+
+    /////MATRIX CLASS
+    Matrix<float> mat, mat2;
+    mat.add("[1,2,3][4,5,6]");
+    mat2.add("[1,2,3][4,5,6]");
+    mat.print();
+
+    mat += mat;
+    mat.print();
+
+    mat -= mat2;
+    mat.print();
+
+    mat *= mat2;
+    mat.print();
+
+    mat *= 2;
+    mat.print();
+
+    mat /= 2; 
+    mat.print();
+
 
     return 0;
 }
