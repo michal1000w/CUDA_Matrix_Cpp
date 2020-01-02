@@ -23,6 +23,36 @@ void deletea(Y*& ptr) {
         ptr = nullptr;
     }
 }
+template <typename Y>
+class Matrix;
+
+//////////////////////////////////////////////////KERNELS//////////////////////////////////////////////////////
+
+template <typename Y>
+__global__ 
+void dotKernel(Y* a, Y* b, Y* c, yeet m, yeet n, yeet k) {
+    yeet row = blockIdx.y * blockDim.y + threadIdx.y;
+    yeet col = blockIdx.x * blockDim.x + threadIdx.x;
+    Y sum = 0;
+    if (col < k && row < m)
+    {
+        for (yeet i = 0; i < n; i++)
+        {
+            sum += a[row * n + i] * b[i * k + col];
+        }
+        c[row * k + col] = sum;
+    }
+}
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////CLASS////////////////////////////////////////////////////////
 template<typename Y>
 class Matrix {
 public:
@@ -41,10 +71,14 @@ public:
     Matrix<Y> operator=(const Matrix<Y>&);
     virtual ~Matrix();
 
+    //friend void dotKernel(const Matrix<Y>* A, const Matrix<Y>* B, Matrix<Y>* C);
+
 
     /////NOWE
     Matrix<Y> operator+=(const Matrix<Y>&);
+    Matrix<Y> operator+=(const Y&);
     Matrix<Y> operator-=(const Matrix<Y>&);
+    Matrix<Y> operator-=(const Y&);
     Matrix<Y> operator*=(const Matrix<Y>&);
     Matrix<Y> operator*=(const Y&);
     Matrix<Y> operator/=(const Y&);
@@ -87,6 +121,9 @@ public:
         return temp;
     }
     void print_size() { std::cout << "size : " << _rows << " x " << _cols << std::endl; }
+
+    //setters
+    void set_threads_per_block(unsigned int threads = 32) { this->THREADS_PER_BLOCK = threads; }
 private:
     unsigned power(short inp) {
         unsigned int output = 1;
@@ -96,14 +133,16 @@ private:
     }
     void initMatrix() {
         this->_data = new Y[size()];
-        for (yeet i = 0; i < size(); i++) this->_data[i] = 0.0;
+        //for (yeet i = 0; i < size(); i++) this->_data[i] = 0.0;
+        Cuda.cset(this->_data, 0.0, size());
     }
     yeet _rows, _cols;
     mutable Y* _data;
 
+    CUDA_Class<Y> Cuda;
+    unsigned int THREADS_PER_BLOCK = 32;
 public:
     void free();
-    CUDA_Class<Y> Cuda;
 };
 
 //////////////////////////////////////////////////KONSTRUKTORY///////////////////////////////////////////////////////////////
@@ -122,15 +161,15 @@ Matrix<Y>::Matrix(yeet rows, yeet cols, vector<Y> data) : _rows(rows), _cols(col
 template<typename Y>
 Matrix<Y>::Matrix(yeet rows, yeet cols, mutable Y* _data) : _rows(rows), _cols(cols) {
     this->initMatrix();
-    for (yeet i = 0; i < size(); i++) this->_data[i] = _data[i];
+    //for (yeet i = 0; i < size(); i++) this->_data[i] = _data[i];
+    Cuda.set(this->_data, _data, size());
 }
 template <typename Y>
 Matrix<Y>::Matrix(const Matrix<Y>& mat) {
     this->_cols = mat._cols;
     this->_rows = mat._rows;
     this->initMatrix();
-    for (yeet i = 0; i < size(); i++)
-        this->_data[i] = mat._data[i];
+    Cuda.set(this->_data, mat._data, this->size());
 }
 template<typename Y>
 Matrix<Y>::Matrix(const std::string& macierz) {
@@ -236,15 +275,6 @@ std::string Matrix<Y>::getString(bool is_int) {
 }
 
 template<typename Y>
-Y& Matrix<Y>::operator()(yeet row, yeet col) {
-    return _data[_cols * row + col];
-}
-template<typename Y>
-Y Matrix<Y>::operator()(yeet row, yeet col) const {
-    return _data[_cols * row + col];
-}
-
-template<typename Y>
 bool Matrix<Y>::exists(yeet row, yeet col) const {
     return (row < _rows && col < _cols);
 }
@@ -326,15 +356,25 @@ void Matrix<Y>::add(std::string macierz) {
 
 ///////////////////////////////////////////////////////////////OPERATORY//////////////////////////////////////////////////////////////
 /////////////////Operatory//////////////////////////////////////
+template <typename Y>
+Y& Matrix<Y>::operator()(yeet row, yeet col) {
+    return _data[_cols * row + col];
+}
+
+template <typename Y>
+Y Matrix<Y>::operator()(yeet row, yeet col) const {
+    return _data[_cols * row + col];
+}
+
 template<typename Y>
-Matrix<Y> Matrix<Y>::operator=(const Matrix<Y>& rhs) { //przepisaæ na CUDA
+Matrix<Y> Matrix<Y>::operator=(const Matrix<Y>& rhs) {
     this->free();
 
     this->_rows = rhs._rows;
     this->_cols = rhs._cols;
 
     this->initMatrix();
-    for (yeet i = 0; i < size(); i++) _data[i] = rhs._data[i];
+    Cuda.set(this->_data, rhs._data, this->size());
 
     return *this;
 }
@@ -345,8 +385,18 @@ Matrix<Y> Matrix<Y>::operator+=(const Matrix<Y>& rhs) {
     return *this;
 }
 template <typename Y>
+Matrix<Y> Matrix<Y>::operator+=(const Y& rhs) {
+    Cuda.cadd(this->_data, rhs, this->size());
+    return *this;
+}
+template <typename Y>
 Matrix<Y> Matrix<Y>::operator-=(const Matrix<Y>& rhs) {
     Cuda.subtract(this->_data, rhs._data, this->size());
+    return *this;
+}
+template <typename Y>
+Matrix<Y> Matrix<Y>::operator-=(const Y& rhs) {
+    Cuda.csubtract(this->_data, rhs, this->size());
     return *this;
 }
 template <typename Y>
@@ -363,4 +413,110 @@ template <typename Y>
 Matrix<Y> Matrix<Y>::operator/=(const Y& rhs) {
     Cuda.cdivide(this->_data, rhs, this->size());
     return *this;
+}
+
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::operator+(const Matrix<Y>& rhs) {
+    Matrix<Y> temp(*this);
+    return temp += rhs;
+}
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::operator-(const Matrix<Y>& rhs) {
+    Matrix<Y> temp(*this);
+    return temp -= rhs;
+}
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::operator*(const Matrix<Y>& rhs) {
+    Matrix<Y> temp(*this);
+    return temp *= rhs;
+}
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::operator*(const Y& rhs) {
+    Matrix<Y> temp(*this);
+    return temp *= rhs;
+}
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::operator/(const Y& rhs) {
+    Matrix<Y> temp(*this);
+    return temp /= rhs;
+}
+
+
+
+
+
+///////////////////////////////////////////////////////MATEMATYCZNE///////////////////////////////////////////////////////////
+template <typename Y>
+Matrix<Y> Matrix<Y>::dot(const Matrix<Y>& rhs) {
+    //variables
+    cudaError_t cudaStatus;
+    unsigned int total_size_a = size() * sizeof(Y);
+    unsigned int total_size_b = rhs.size() * sizeof(Y);
+    unsigned int total_size_c = this->_rows * rhs._cols * sizeof(Y);
+
+    Y* host_a = this->_data;
+    Y* host_b = rhs._data;
+    Y* host_c;
+    yeet m = this->_rows;
+    yeet n = this->_cols;
+    yeet k = rhs._cols;
+
+    Y* dev_a;
+    Y* dev_b;
+    Y* dev_c;
+
+    //set the device
+    cudaStatus = cudaSetDevice(0);
+    if (cudaStatus != cudaSuccess) cout << "Setting device failed" << endl;
+
+    //allocate memory
+    cudaStatus = cudaMalloc((void**)&dev_a, total_size_a);
+    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [a]" << endl;
+    cudaStatus = cudaMalloc((void**)&dev_b, total_size_b);
+    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [b]" << endl;
+    cudaStatus = cudaMalloc((void**)&dev_c, total_size_c);
+    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [c]" << endl;
+
+    //copy vectors to GPU
+    cudaStatus = cudaMemcpy(dev_a, host_a, total_size_a, cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) cout << "Copying to device failed [a]" << endl;
+    cudaStatus = cudaMemcpy(dev_b, host_b, total_size_b, cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) cout << "Copying to device failed [b]" << endl;
+
+    //launch kernel
+    dim3 threads(THREADS_PER_BLOCK, THREADS_PER_BLOCK);
+    dim3 grid((k + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, (m + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK);
+    dotKernel << <grid, threads >> > (dev_a, dev_b, dev_c, m, n, k);
+
+    //check if errors
+    cudaStatus = cudaGetLastError();
+    if (cudaStatus != cudaSuccess) cout << "Launching kernel failed [dot]" << endl;
+
+
+    //synchronize devices
+    cudaStatus = cudaDeviceSynchronize();
+    if (cudaStatus != cudaSuccess) cout << "Synchronizing failed" << endl;
+
+    //copy output to host
+    cudaStatus = cudaMemcpy(host_c, dev_c, total_size_c, cudaMemcpyDeviceToHost);
+    if (cudaStatus != cudaSuccess) cout << "Copying to host failed\n" << cudaStatus << endl;
+
+    //free memory
+    cudaFree(dev_a);
+    cudaFree(dev_b);
+    cudaFree(dev_c);
+
+    //reset the device
+    cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
+
+    //create output Matrix
+    Matrix<Y> C(this->_rows, rhs._cols, host_c);
+
+    return C;
 }

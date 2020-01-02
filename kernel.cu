@@ -73,6 +73,7 @@ int main() {
 
     /////MATRIX CLASS
     Matrix<float> mat, mat2;
+    /*
     mat.add("[1,2,3][4,5,6]");
     mat2.add("[1,2,3][4,5,6]");
     mat.print();
@@ -91,6 +92,31 @@ int main() {
 
     mat /= 2; 
     mat.print();
+
+    cout << endl;
+    mat += 2;
+    mat.print();
+
+    mat -= 2; 
+    mat.print();
+
+    Matrix<float> m3("[2,2,2][3,3,3]");
+    mat2 = m3;
+    mat2.print();
+
+    mat2 = mat + m3;
+    mat2.print();
+    mat2 = mat2 - m3;
+    mat2.print();
+    mat2 = mat * m3;
+    mat2.print();
+
+    cout << endl << endl;
+    */
+    mat.add("[1,2,3]");
+    mat2.add("[1,0][0,2][3,0]");
+
+    mat.dot(mat2).print();
 
 
     return 0;
