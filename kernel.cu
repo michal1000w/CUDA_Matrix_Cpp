@@ -60,5 +60,13 @@ int main() {
     cu.cdivide(a, 2, size);
     printArray(a, size);
 
+    //add constant
+    cu.cadd(a, 1, size);
+    printArray(a, size);
+
+    //subtract constant
+    cu.csubtract(a, 1, size);
+    printArray(a, size);
+
     return 0;
 }
