@@ -613,16 +613,16 @@ Matrix<Y> Matrix<Y>::square() {
 
 template <typename Y>
 double Matrix<Y>::mean() {   ///this works on CPU only //todo
-    double output = 0.0;
-    double count = this->size();
-    double suma = 0.0;
+    Y output = 0.0;
+    Y count = this->size();
+    Y suma = 0.0;
 
-    double* arr = this->getArray();
+    Y* arr = this->getArray();
 
     for (yeet i = 0; i < count; i++)
         suma += arr[i];
 
-    output = (suma / (double)count);
+    output = (suma / (float)count);
 
     delete[] arr;
 
