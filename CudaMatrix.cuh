@@ -1,7 +1,6 @@
 #ifndef __CUDA_MATRIX__
 #define __CUDA_MATRIX__
 
-
 #include "CUDA_Class.cuh";
 
 #include <vector>
@@ -13,27 +12,118 @@ typedef long long yeet;
 using std::vector;
 using std::string;
 
+
 template <typename Y>
-void deletep(Y&) {}
-template <typename Y>
-void deletep(Y*& ptr) {
-    delete ptr;
-    ptr = nullptr;
-}
-template <typename Y>
-void deletea(Y*& ptr) {
-    if (ptr != nullptr) {
-        delete[] ptr;
-        ptr = nullptr;
-    }
-}
-template <typename Y>
-class CMatrix;
+class CuMatrix;
 
 //////////////////////////////////////////////////KERNELS//////////////////////////////////////////////////////
 
 template <typename Y>
-__global__ 
+__global__
+void setNKernel(Y* a, const Y* b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] = b[i];
+}
+
+template <typename Y>
+__global__
+void csetNKernel(Y* a, const Y b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] = b;
+}
+
+template <typename Y>
+__global__
+void addKernel(Y* a, const Y* b) {
+    int i = threadIdx.x;
+    a[i] += b[i];
+}
+
+template <typename Y>
+__global__
+void addNKernel(Y* a, const Y* b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] += b[i];
+}
+
+template <typename Y>
+__global__
+void caddNKernel(Y* a, const Y b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] += b;
+}
+
+template <typename Y>
+__global__
+void subtractNKernel(Y* a, const Y* b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] -= b[i];
+}
+
+template <typename Y>
+__global__
+void csubtractNKernel(Y* a, const Y b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] -= b;
+}
+
+template <typename Y>
+__global__
+void multiplyNKernel(Y* a, const Y* b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] *= b[i];
+}
+
+template <typename Y>
+__global__
+void cmultiplyNKernel(Y* a, const Y b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] *= b;
+}
+
+template <typename Y>
+__global__
+void cdivideNKernel(Y* a, const Y b, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] /= b;
+}
+
+///////////////
+template <typename Y>
+__global__
+void sigmoidKernel(Y* a, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] = 1.0 / (1.0 + std::exp(-1 * a[i]));
+}
+
+template <typename Y>
+__global__
+void sigmoid_derivativeKernel(Y* a, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] = a[i] * (1 - a[i]);
+}
+
+template <typename Y>
+__global__
+void squareKernel(Y* a, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] *= a[i];
+}
+
+template <typename Y>
+__global__
 void dotKernel(Y* a, Y* b, Y* c, yeet m, yeet n, yeet k) {
     yeet row = blockIdx.y * blockDim.y + threadIdx.y;
     yeet col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -62,56 +152,58 @@ void transposeKernel(Y* mat_in, Y* mat_out, yeet rows, yeet cols) {
 
 //////////////////////////////////////////////////CLASS////////////////////////////////////////////////////////
 template<typename Y>
-class CMatrix {
+class CuMatrix {
 public:
     typedef Y value_type;
-    CMatrix() : _cols(0), _rows(0), _data(new Y[0]) {};
-    CMatrix(yeet rows, yeet cols);
+    CuMatrix() : _cols(0), _rows(0), _data(new Y[0]) {};
+    CuMatrix(yeet rows, yeet cols);
     //new
-    CMatrix(yeet, yeet, mutable Y*);
-    CMatrix(yeet, yeet, vector<Y>);
-    CMatrix(const std::string&);
-    CMatrix(const CMatrix<Y>&);
+    CuMatrix(yeet, yeet, mutable Y*);
+    CuMatrix(yeet, yeet, vector<Y>);
+    CuMatrix(const std::string&);
+    CuMatrix(const CuMatrix<Y>&);
 
     bool exists(yeet row, yeet col) const;
     Y& operator()(yeet row, yeet col);
     Y operator()(yeet row, yeet col) const;
-    CMatrix<Y> operator=(const CMatrix<Y>&);
-    virtual ~CMatrix();
+    CuMatrix<Y> operator=(const CuMatrix<Y>&);
+    virtual ~CuMatrix();
 
-    //friend void dotKernel(const CMatrix<Y>* A, const CMatrix<Y>* B, CMatrix<Y>* C);
+    //friend void dotKernel(const CuMatrix<Y>* A, const CuMatrix<Y>* B, CuMatrix<Y>* C);
 
 
     /////NOWE
-    CMatrix<Y> operator+=(const CMatrix<Y>&);
-    CMatrix<Y> operator+=(const Y&);
-    CMatrix<Y> operator-=(const CMatrix<Y>&);
-    CMatrix<Y> operator-=(const Y&);
-    CMatrix<Y> operator*=(const CMatrix<Y>&);
-    CMatrix<Y> operator*=(const Y&);
-    CMatrix<Y> operator/=(const Y&);
+    CuMatrix<Y> operator+=(const CuMatrix<Y>&);
+    CuMatrix<Y> operator+=(const Y&);
+    CuMatrix<Y> operator-=(const CuMatrix<Y>&);
+    CuMatrix<Y> operator-=(const Y&);
+    CuMatrix<Y> operator*=(const CuMatrix<Y>&);
+    CuMatrix<Y> operator*=(const Y&);
+    CuMatrix<Y> operator/=(const Y&);
 
     //Dodatkowe
-    CMatrix<Y> operator+(const CMatrix<Y>&);
-    CMatrix<Y> operator-(const CMatrix<Y>&);
-    CMatrix<Y> operator*(const CMatrix<Y>&);
-    CMatrix<Y> operator*(const Y&);
-    CMatrix<Y> operator/(const Y&);
+    CuMatrix<Y> operator+(const CuMatrix<Y>&);
+    CuMatrix<Y> operator+(const Y&);
+    CuMatrix<Y> operator-(const CuMatrix<Y>&);
+    CuMatrix<Y> operator-(const Y&);
+    CuMatrix<Y> operator*(const CuMatrix<Y>&);
+    CuMatrix<Y> operator*(const Y&);
+    CuMatrix<Y> operator/(const Y&);
 
-    CMatrix<Y> dot(const CMatrix<Y>&);
-    CMatrix<Y> T();
+    CuMatrix<Y> dot(const CuMatrix<Y>&);
+    CuMatrix<Y> T();
 
-    CMatrix<Y> sigmoid();
-    CMatrix<Y> sigmoid_derivative();
+    CuMatrix<Y> sigmoid();
+    CuMatrix<Y> sigmoid_derivative();
 
-    double mean(); //for now works only on CPU //todo gpu compute
-    CMatrix<Y> square();
+    Y mean(); //for now works only on CPU //todo gpu compute
+    CuMatrix<Y> square();
 
 
-    //friend inline CMatrix<Y>& sigmoid(const CMatrix<Y>& m);
-    //friend inline CMatrix<Y>& sigmoid_derivative(const CMatrix<Y>& m);
+    //friend inline CuMatrix<Y>& sigmoid(const CuMatrix<Y>& m);
+    //friend inline CuMatrix<Y>& sigmoid_derivative(const CuMatrix<Y>& m);
 
-    CMatrix<Y> print(short round = (short)5);
+    CuMatrix<Y> print(short round = (short)5);
     void add(std::string);
     std::string getString(bool is_int = false);
 
@@ -131,6 +223,7 @@ public:
 
     //setters
     void set_threads_per_block(unsigned int threads = 32) { this->THREADS_PER_BLOCK = threads; }
+    void set_threads(unsigned int threads = 512) { this->THREADS = threads; }
 private:
     unsigned power(short inp) {
         unsigned int output = 1;
@@ -138,48 +231,50 @@ private:
             output *= 10;
         return output;
     }
-    void initCMatrix() {
-        this->_data = new Y[size()];
-        //for (yeet i = 0; i < size(); i++) this->_data[i] = 0.0;
-        Cuda.cset(this->_data, 0.0, size());
+    void initCuMatrix() {
+        cudaMallocManaged(&this->_data, size() * sizeof(Y));
+        //for (yeet i = 0; i < size(); i++) this->_data[i] = 0.0; //to przerobiæ na Cuda.set
+        Cuda_set(this->_data, 0.0, size());
     }
     yeet _rows, _cols;
     mutable Y* _data;
 
-    CUDA_Class<Y> Cuda;
+    void Cuda_set(Y* a, Y* b, yeet size);
+    void Cuda_set(Y* a, Y b, yeet size);
     unsigned int THREADS_PER_BLOCK = 32;
+    unsigned int THREADS = 512;
 public:
     void free();
 };
 
 //////////////////////////////////////////////////KONSTRUKTORY///////////////////////////////////////////////////////////////
 template<typename Y>
-CMatrix<Y>::CMatrix(yeet rows, yeet cols) : _rows(rows), _cols(cols) {
-    this->initCMatrix();
+CuMatrix<Y>::CuMatrix(yeet rows, yeet cols) : _rows(rows), _cols(cols) {
+    this->initCuMatrix();
 }
 
 template <typename Y>
-CMatrix<Y>::CMatrix(yeet rows, yeet cols, vector<Y> data) : _rows(rows), _cols(cols) {
-    this->initCMatrix();
+CuMatrix<Y>::CuMatrix(yeet rows, yeet cols, vector<Y> data) : _rows(rows), _cols(cols) {
+    this->initCuMatrix();
     for (yeet i = 0; i < data.size(); i++)
         _data[i] = data[i];
 }
 
 template<typename Y>
-CMatrix<Y>::CMatrix(yeet rows, yeet cols, mutable Y* _data) : _rows(rows), _cols(cols) {
-    this->initCMatrix();
-    //for (yeet i = 0; i < size(); i++) this->_data[i] = _data[i];
-    Cuda.set(this->_data, _data, size());
+CuMatrix<Y>::CuMatrix(yeet rows, yeet cols, mutable Y* _data) : _rows(rows), _cols(cols) {
+    this->initCuMatrix();
+    for (yeet i = 0; i < size(); i++) this->_data[i] = _data[i];
+    Cuda_set(this->_data, _data, size());
 }
 template <typename Y>
-CMatrix<Y>::CMatrix(const CMatrix<Y>& mat) {
+CuMatrix<Y>::CuMatrix(const CuMatrix<Y>& mat) {
     this->_cols = mat._cols;
     this->_rows = mat._rows;
-    this->initCMatrix();
-    Cuda.set(this->_data, mat._data, this->size());
+    this->initCuMatrix();
+    Cuda_set(this->_data, mat._data, this->size());
 }
 template<typename Y>
-CMatrix<Y>::CMatrix(const std::string& macierz) {
+CuMatrix<Y>::CuMatrix(const std::string& macierz) {
     //Podzia³ na fragmenty
     yeet len = macierz.length();
     std::string fragment = "";
@@ -222,10 +317,10 @@ CMatrix<Y>::CMatrix(const std::string& macierz) {
 
     this->_cols = elementy;
 
-    //Inicjowanie nowej macierzy typu CMatrix
-    this->initCMatrix();
+    //Inicjowanie nowej macierzy typu CuMatrix
+    this->initCuMatrix();
 
-    //Przenoszenie elementów z vector do macierzy typu CMatrix
+    //Przenoszenie elementów z vector do macierzy typu CuMatrix
     yeet i = 0;
     for (yeet y = 0; y < this->_rows; y++) {
         for (yeet x = 0; x < this->_cols; x++) {
@@ -241,12 +336,12 @@ CMatrix<Y>::CMatrix(const std::string& macierz) {
 
 //////////////////////////////////////////////////DESTRUKTOR///////////////////////////////////////////////////////////////
 template<typename Y>
-CMatrix<Y>::~CMatrix() {
+CuMatrix<Y>::~CuMatrix() {
     this->free(); //tutaj
 }
 //////////////////////////////////////////////////DODATKOWE///////////////////////////////////////////////////////////////
 template<typename Y>
-CMatrix<Y> CMatrix<Y>::print(short roundness) {
+CuMatrix<Y> CuMatrix<Y>::print(short roundness) {
     int pomocnicza = 0;
     roundness = (roundness < 5 ? roundness : 4);
     for (yeet i = 0; i < this->_rows; i++) {
@@ -265,9 +360,9 @@ CMatrix<Y> CMatrix<Y>::print(short roundness) {
 }
 
 template <typename Y>
-std::string CMatrix<Y>::getString(bool is_int) {
+std::string CuMatrix<Y>::getString(bool is_int) {
     std::string data = "";
-    CMatrix<Y> temp(*this);
+    CuMatrix<Y> temp(*this);
     for (int i = 0; i < this->_rows; i++) {
         data += "[";
         for (int j = 0; j < this->_cols; j++) {
@@ -282,21 +377,17 @@ std::string CMatrix<Y>::getString(bool is_int) {
 }
 
 template<typename Y>
-bool CMatrix<Y>::exists(yeet row, yeet col) const {
+bool CuMatrix<Y>::exists(yeet row, yeet col) const {
     return (row < _rows && col < _cols);
 }
 
 template<typename Y>
-void CMatrix<Y>::free() {
-    for (yeet i = 0, c = size(); i < c; ++i) {
-        //will do nothing if Y isn't a pointer
-        deletep(_data[i]);
-    }
-    deletea(_data);
+void CuMatrix<Y>::free() {
+    cudaFree(_data);
 }
 
 template <typename Y>
-void CMatrix<Y>::add(std::string macierz) {
+void CuMatrix<Y>::add(std::string macierz) {
     //Podzia³ na fragmenty
     yeet len = macierz.length();
     std::string fragment = "";
@@ -342,10 +433,10 @@ void CMatrix<Y>::add(std::string macierz) {
     //czyszczenie starej macierzy
     this->free();
 
-    //Inicjowanie nowej macierzy typu CMatrix
-    this->initCMatrix();
+    //Inicjowanie nowej macierzy typu CuMatrix
+    this->initCuMatrix();
 
-    //Przenoszenie elementów z vector do macierzy typu CMatrix
+    //Przenoszenie elementów z vector do macierzy typu CuMatrix
     yeet i = 0;
     for (yeet y = 0; y < this->_rows; y++) {
         for (yeet x = 0; x < this->_cols; x++) {
@@ -359,260 +450,203 @@ void CMatrix<Y>::add(std::string macierz) {
     wartosci.clear();
 }
 
+template <typename Y>
+void CuMatrix<Y>::Cuda_set(Y* a, Y* b, yeet size) {
+    setNKernel << < (size + THREADS - 1) / THREADS, THREADS >> > (a, b, size);
+    cudaDeviceSynchronize();
+}
+
+template <typename Y>
+void CuMatrix<Y>::Cuda_set(Y* a, Y b, yeet size) {
+    csetNKernel << < (size + THREADS - 1) / THREADS, THREADS >> > (a, b, size);
+    cudaDeviceSynchronize();
+}
 
 
 ///////////////////////////////////////////////////////////////OPERATORY//////////////////////////////////////////////////////////////
 /////////////////Operatory//////////////////////////////////////
 template <typename Y>
-Y& CMatrix<Y>::operator()(yeet row, yeet col) {
+Y& CuMatrix<Y>::operator()(yeet row, yeet col) {
     return _data[_cols * row + col];
 }
 
 template <typename Y>
-Y CMatrix<Y>::operator()(yeet row, yeet col) const {
+Y CuMatrix<Y>::operator()(yeet row, yeet col) const {
     return _data[_cols * row + col];
 }
 
-template<typename Y>
-CMatrix<Y> CMatrix<Y>::operator=(const CMatrix<Y>& rhs) {
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator=(const CuMatrix<Y>& rhs) {
     this->free();
 
     this->_rows = rhs._rows;
     this->_cols = rhs._cols;
 
-    this->initCMatrix();
-    Cuda.set(this->_data, rhs._data, this->size());
+    this->initCuMatrix();
+    Cuda_set(this->_data, rhs._data, this->size());
 
     return *this;
 }
 
+
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator+=(const CMatrix<Y>& rhs) {
-    Cuda.add(this->_data, rhs._data, this->size());
-    return *this;
-}
-template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator+=(const Y& rhs) {
-    Cuda.cadd(this->_data, rhs, this->size());
-    return *this;
-}
-template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator-=(const CMatrix<Y>& rhs) {
-    Cuda.subtract(this->_data, rhs._data, this->size());
-    return *this;
-}
-template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator-=(const Y& rhs) {
-    Cuda.csubtract(this->_data, rhs, this->size());
-    return *this;
-}
-template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator*=(const CMatrix<Y>& rhs) {
-    Cuda.multiply(this->_data, rhs._data, this->size());
-    return *this;
-}
-template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator*=(const Y& rhs) {
-    Cuda.cmultiply(this->_data, rhs, this->size());
-    return *this;
-}
-template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator/=(const Y& rhs) {
-    Cuda.cdivide(this->_data, rhs, this->size());
+CuMatrix<Y> CuMatrix<Y>::operator+=(const CuMatrix<Y>& rhs) {
+    addNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (this->_data, rhs._data, size());
+    cudaDeviceSynchronize();
     return *this;
 }
 
-
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator+(const CMatrix<Y>& rhs) {
-    CMatrix<Y> temp(*this);
-    return temp += rhs;
+CuMatrix<Y> CuMatrix<Y>::operator+=(const Y& rhs) {
+    caddNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (this->_data, rhs, size());
+    cudaDeviceSynchronize();
+    return *this;
 }
 
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator-(const CMatrix<Y>& rhs) {
-    CMatrix<Y> temp(*this);
-    return temp -= rhs;
+CuMatrix<Y> CuMatrix<Y>::operator-=(const CuMatrix<Y>& rhs) {
+    subtractNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (this->_data, rhs._data, size());
+    cudaDeviceSynchronize();
+    return *this;
 }
 
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator*(const CMatrix<Y>& rhs) {
-    CMatrix<Y> temp(*this);
-    return temp *= rhs;
+CuMatrix<Y> CuMatrix<Y>::operator-=(const Y& rhs) {
+    csubtractNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (this->_data, rhs, size());
+    cudaDeviceSynchronize();
+    return *this;
 }
 
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator*(const Y& rhs) {
-    CMatrix<Y> temp(*this);
-    return temp *= rhs;
+CuMatrix<Y> CuMatrix<Y>::operator*=(const CuMatrix<Y>& rhs) {
+    multiplyNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (this->_data, rhs._data, size());
+    cudaDeviceSynchronize();
+    return *this;
 }
 
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::operator/(const Y& rhs) {
-    CMatrix<Y> temp(*this);
-    return temp /= rhs;
+CuMatrix<Y> CuMatrix<Y>::operator*=(const Y& rhs) {
+    cmultiplyNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (this->_data, rhs, size());
+    cudaDeviceSynchronize();
+    return *this;
+}
+
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator/=(const Y& rhs) {
+    cdivideNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (this->_data, rhs, size());
+    cudaDeviceSynchronize();
+    return *this;
+}
+
+
+///////////////
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator+(const CuMatrix<Y>& rhs) {
+    CuMatrix<Y> temp(*this);
+    addNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, rhs._data, size());
+    cudaDeviceSynchronize();
+    return temp;
+}
+
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator+(const Y& rhs) {
+    CuMatrix<Y> temp(*this);
+    caddNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, rhs, size());
+    cudaDeviceSynchronize();
+    return temp;
+}
+
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator-(const CuMatrix<Y>& rhs) {
+    CuMatrix<Y> temp(*this);
+    subtractNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, rhs._data, size());
+    cudaDeviceSynchronize();
+    return temp;
+}
+
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator-(const Y& rhs) {
+    CuMatrix<Y> temp(*this);
+    csubtractNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, rhs, size());
+    cudaDeviceSynchronize();
+    return temp;
+}
+
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator*(const CuMatrix<Y>& rhs) {
+    CuMatrix<Y> temp(*this);
+    multiplyNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, rhs._data, size());
+    cudaDeviceSynchronize();
+    return temp;
+}
+
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator*(const Y& rhs) {
+    CuMatrix<Y> temp(*this);
+    cmultiplyNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, rhs, size());
+    cudaDeviceSynchronize();
+    return temp;
+}
+
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::operator/(const Y& rhs) {
+    CuMatrix<Y> temp(*this);
+    cdivideNKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, rhs, size());
+    cudaDeviceSynchronize();
+    return temp;
 }
 
 
 
-
-
-///////////////////////////////////////////////////////MATEMATYCZNE///////////////////////////////////////////////////////////
+////////////////////////////MATEMATYCZNE///////////////////////////////
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::dot(const CMatrix<Y>& rhs) {
-    //variables
-    cudaError_t cudaStatus;
-    unsigned int total_size_a = size() * sizeof(Y);
-    unsigned int total_size_b = rhs.size() * sizeof(Y);
-    unsigned int total_size_c = this->_rows * rhs._cols * sizeof(Y);
+CuMatrix<Y> CuMatrix<Y>::sigmoid() {
+    CuMatrix<Y> temp(*this);
+    sigmoidKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, size());
+    cudaDeviceSynchronize();
+    return temp;
+}
 
-    Y* host_a = this->_data;
-    Y* host_b = rhs._data;
-    Y* host_c = new Y[total_size_c];
-    yeet m = this->_rows;
-    yeet n = this->_cols;
-    yeet k = rhs._cols;
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::sigmoid_derivative() {
+    CuMatrix<Y> temp(*this);
+    sigmoid_derivativeKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, size());
+    cudaDeviceSynchronize();
+    return temp;
+}
 
-    Y* dev_a;
-    Y* dev_b;
-    Y* dev_c;
+template <typename Y>
+CuMatrix<Y> CuMatrix<Y>::dot(const CuMatrix<Y>& rhs) {
+    CuMatrix<Y> temp(this->_rows,rhs._cols);
 
-    //set the device
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) cout << "Setting device failed" << endl;
-
-    //allocate memory
-    cudaStatus = cudaMalloc((void**)&dev_a, total_size_a);
-    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [a]" << endl;
-    cudaStatus = cudaMalloc((void**)&dev_b, total_size_b);
-    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [b]" << endl;
-    cudaStatus = cudaMalloc((void**)&dev_c, total_size_c);
-    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [c]" << endl;
-
-    //copy vectors to GPU
-    cudaStatus = cudaMemcpy(dev_a, host_a, total_size_a, cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) cout << "Copying to device failed [a]" << endl;
-    cudaStatus = cudaMemcpy(dev_b, host_b, total_size_b, cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) cout << "Copying to device failed [b]" << endl;
-
-    //launch kernel
     dim3 threads(THREADS_PER_BLOCK, THREADS_PER_BLOCK);
-    dim3 grid((k + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, (m + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK);
-    dotKernel << <grid, threads >> > (dev_a, dev_b, dev_c, m, n, k);
-
-    //check if errors
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) cout << "Launching kernel failed [dot]" << endl;
-
-
-    //synchronize devices
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) cout << "Synchronizing failed" << endl;
-
-    //copy output to host
-    cudaStatus = cudaMemcpy(host_c, dev_c, total_size_c, cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) cout << "Copying to host failed\n" << cudaStatus << endl;
-
-    //free memory
-    cudaFree(dev_a);
-    cudaFree(dev_b);
-    cudaFree(dev_c);
-
-    //reset the device
-    cudaStatus = cudaDeviceReset();
-    if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
-
-    //create output CMatrix
-    CMatrix<Y> C(this->_rows, rhs._cols, host_c);
-
-    delete[] host_c;
-
-    return C;
+    dim3 grid((rhs._cols + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, (this->_rows + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK);
+    dotKernel << <grid, threads >> > (this->_data, rhs._data, temp._data, this->_rows, this->_cols, rhs._cols);
+    cudaDeviceSynchronize();
+    return temp;
 }
 
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::T() {
-    //variables
-    cudaError_t cudaStatus;
-    unsigned int total_size = size() * sizeof(Y);
+CuMatrix<Y> CuMatrix<Y>::T() {
+    CuMatrix<Y> temp(this->_cols, this->_rows);
 
-    Y* host_a = this->_data;
-    Y* host_c = new Y[size()];
-
-    Y* dev_a;
-    Y* dev_c;
-
-    //set the device
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) cout << "Setting device failed" << endl;
-
-    //allocate memory
-    cudaStatus = cudaMalloc((void**)&dev_a, total_size);
-    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [a]" << endl;
-    cudaStatus = cudaMalloc((void**)&dev_c, total_size);
-    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed [c]" << endl;
-
-    //copy vectors to GPU
-    cudaStatus = cudaMemcpy(dev_a, host_a, total_size, cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) cout << "Copying to device failed [a]" << endl;
-
-    //launch kernel
     dim3 threads(THREADS_PER_BLOCK, THREADS_PER_BLOCK);
     dim3 grid((size() - 1) / THREADS_PER_BLOCK + 1, (size() - 1) / THREADS_PER_BLOCK + 1);
-    transposeKernel << <grid,threads>> > (dev_a, dev_c, this->_rows,this->_cols);
-
-    //check if errors
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) cout << "Launching kernel failed [dot]" << endl;
-
-
-    //synchronize devices
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) cout << "Synchronizing failed" << endl;
-
-    //copy output to host
-    cudaStatus = cudaMemcpy(host_c, dev_c, total_size, cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) cout << "Copying to host failed\n" << cudaStatus << endl;
-
-    //free memory
-    cudaFree(dev_a);
-    cudaFree(dev_c);
-
-    //reset the device
-    cudaStatus = cudaDeviceReset();
-    if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
-
-    //create output CMatrix
-    CMatrix<Y> C(this->_cols, this->_rows, host_c);
-
-    delete[] host_c;
-
-    return C;
+    transposeKernel << <grid, threads >> > (this->_data, temp._data, this->_rows, this->_cols);
+    cudaDeviceSynchronize();
+    return temp;
 }
 
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::sigmoid() {
-    CMatrix<Y> output(*this);
-    Cuda.sigmoid(output._data, size());
-    return output;
+CuMatrix<Y> CuMatrix<Y>::square() {
+    CuMatrix<Y> temp(*this);
+    squareKernel << <(size() + THREADS - 1) / THREADS, THREADS >> > (temp._data, size());
+    cudaDeviceSynchronize();
+    return temp;
 }
 
 template <typename Y>
-CMatrix<Y> CMatrix<Y>::sigmoid_derivative() {
-    CMatrix<Y> output(*this);
-    Cuda.sigmoid_derivative(output._data, size());
-    return output;
-}
-
-template <typename Y>
-CMatrix<Y> CMatrix<Y>::square() {
-    CMatrix<Y> output(*this);
-    Cuda.square(output._data, size());
-    return output;
-}
-
-template <typename Y>
-double CMatrix<Y>::mean() {   ///this works on CPU only //todo
+Y CuMatrix<Y>::mean() {   ///this works on CPU only //todo
     Y output = 0.0;
     Y count = this->size();
     Y suma = 0.0;
@@ -628,5 +662,4 @@ double CMatrix<Y>::mean() {   ///this works on CPU only //todo
 
     return output;
 }
-
 #endif
