@@ -1,5 +1,6 @@
 //#include "CUDA_Class.cuh"
 #include "CudaMatrix.cuh"
+#include <chrono>
 
 
 
@@ -19,7 +20,22 @@ void printArray(float* a, unsigned int size) {
     cout << " ]" << endl;
 }
 
+void print_time(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point stop) {
+    double duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+
+    cout << "[Done] in : ";
+
+    double seconds = double((int)duration % 60000) / 1000.0;
+    int minutes = int(duration / 1000) / 60;
+
+    if (minutes > 0)
+        cout << "[ " << minutes << " min " << seconds << " s ]" << endl;
+    else
+        cout << "[ " << seconds << " s ]" << endl;
+}
+
 int main() {
+    auto start = std::chrono::steady_clock::now();
     /*
     unsigned int size = 5; //5
     float* a = new float[size];
@@ -72,8 +88,9 @@ int main() {
     */
 
     /////MATRIX CLASS
+
     CMatrix<float> mat, mat2;
-    /*
+    
     mat.add("[1,2,3][4,5,6]");
     mat2.add("[1,2,3][4,5,6]");
     mat.print();
@@ -100,7 +117,7 @@ int main() {
     mat -= 2; 
     mat.print();
 
-    Matrix<float> m3("[2,2,2][3,3,3]");
+    CMatrix<float> m3("[2,2,2][3,3,3]");
     mat2 = m3;
     mat2.print();
 
@@ -112,7 +129,7 @@ int main() {
     mat2.print();
 
     cout << endl << endl;
-    */
+    
     mat.add("[1,2,3]");
     mat2.add("[1,0][2,2][3,0]");
 
@@ -127,5 +144,8 @@ int main() {
     mat.square().print();
 
 
+    ///sprawdzanie czasu
+    auto stop = std::chrono::steady_clock::now();
+    print_time(start, stop);
     return 0;
 }
