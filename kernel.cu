@@ -116,10 +116,15 @@ int main() {
     mat.add("[1,2,3]");
     mat2.add("[1,0][2,2][3,0]");
 
+    /*
     mat = mat.dot(mat2) * 5;
     mat.print();
     cout << endl;
     mat.T().print();
+    mat.sigmoid().print();
+    */
+
+    mat.square().print();
 
 
     return 0;

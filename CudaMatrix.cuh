@@ -96,12 +96,11 @@ public:
 
     Matrix<Y> dot(const Matrix<Y>&);
     Matrix<Y> T();
-    Matrix<Y> expa();
 
     Matrix<Y> sigmoid();
     Matrix<Y> sigmoid_derivative();
 
-    double mean();
+    double mean(); //for now works only on CPU //todo gpu compute
     Matrix<Y> square();
 
 
@@ -522,6 +521,8 @@ Matrix<Y> Matrix<Y>::dot(const Matrix<Y>& rhs) {
     //create output Matrix
     Matrix<Y> C(this->_rows, rhs._cols, host_c);
 
+    delete[] host_c;
+
     return C;
 }
 
@@ -580,5 +581,46 @@ Matrix<Y> Matrix<Y>::T() {
     //create output Matrix
     Matrix<Y> C(this->_cols, this->_rows, host_c);
 
+    delete[] host_c;
+
     return C;
+}
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::sigmoid() {
+    Matrix<Y> output(*this);
+    Cuda.sigmoid(output._data, size());
+    return output;
+}
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::sigmoid_derivative() {
+    Matrix<Y> output(*this);
+    Cuda.sigmoid_derivative(output._data, size());
+    return output;
+}
+
+template <typename Y>
+Matrix<Y> Matrix<Y>::square() {
+    Matrix<Y> output(*this);
+    Cuda.square(output._data, size());
+    return output;
+}
+
+template <typename Y>
+double Matrix<Y>::mean() {   ///this works on CPU only //todo
+    double output = 0.0;
+    double count = this->size();
+    double suma = 0.0;
+
+    double* arr = this->getArray();
+
+    for (yeet i = 0; i < count; i++)
+        suma += arr[i];
+
+    output = (suma / (double)count);
+
+    delete[] arr;
+
+    return output;
 }

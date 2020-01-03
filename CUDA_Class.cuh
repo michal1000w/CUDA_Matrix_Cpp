@@ -90,19 +90,26 @@ void cdivideNKernel(Y* a, const Y b, int n) {
 ///////////////
 template <typename Y>
 __global__ 
-void dotKernel(Y* A, Y* B, Y* C, int N) {
-    int ROW = blockIdx.y * blockDim.y + threadIdx.y;
-    int COL = blockIdx.x * blockDim.x + threadIdx.x;
+void sigmoidKernel(Y* a, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] = 1.0 / (1.0 + std::exp(-1 * a[i]));
+}
 
-    Y tmpSum = 0;
+template <typename Y>
+__global__
+void sigmoid_derivativeKernel(Y* a, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] = a[i] * (1 - a[i]);
+}
 
-    if (ROW < N && COL < N) {
-        // each thread computes one element of the block sub-matrix
-        for (int i = 0; i < N; i++) {
-            tmpSum += A[ROW * N + i] * B[i * N + COL];
-        }
-    }
-    C[ROW * N + COL] = tmpSum;
+template <typename Y>
+__global__
+void squareKernel(Y* a, int n) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    if (i < n)
+        a[i] *= a[i];
 }
 
 
@@ -124,6 +131,11 @@ public:
     cudaError_t multiply(Y* a, Y* b, unsigned int size);
     cudaError_t cmultiply(Y* a, Y b, unsigned int size);
     cudaError_t cdivide(Y* a, Y b, unsigned int size);
+
+    //matematyczne
+    cudaError_t sigmoid(Y* a, unsigned int size);
+    cudaError_t sigmoid_derivative(Y* a, unsigned int size);
+    cudaError_t square(Y* a, unsigned int size);
 
     //setters
     void set_threads_per_block(unsigned int threads = 512) { this->THREADS_PER_BLOCK = threads; }
@@ -549,6 +561,144 @@ cudaError_t CUDA_Class<Y>::cdivide(Y* a, Y b, unsigned int size) {
 
     //launch kernel
     cdivideNKernel << <(size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >> > (dev_a, b, size);
+
+    //check if errors
+    cudaStatus = cudaGetLastError();
+    if (cudaStatus != cudaSuccess) cout << "Launching kernel failed" << endl;
+
+
+    //synchronize devices
+    cudaStatus = cudaDeviceSynchronize();
+    if (cudaStatus != cudaSuccess) cout << "Synchronizing failed" << endl;
+
+    //copy output to host
+    cudaStatus = cudaMemcpy(a, dev_a, total_size, cudaMemcpyDeviceToHost);
+    if (cudaStatus != cudaSuccess) cout << "Copying to host failed" << endl;
+
+    //free memory
+    cudaFree(dev_a);
+
+    //reset the device
+    cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
+
+    return cudaStatus;
+}
+
+template <typename Y>
+cudaError_t CUDA_Class<Y>::sigmoid(Y* a, unsigned int size) {
+    //variables
+    cudaError_t cudaStatus;
+    unsigned int total_size = size * sizeof(Y);
+
+    Y* dev_a = 0;
+
+    //set the device
+    cudaStatus = cudaSetDevice(0);
+    if (cudaStatus != cudaSuccess) cout << "Setting device failed" << endl;
+
+    //allocate memory
+    cudaStatus = cudaMalloc((void**)&dev_a, total_size);
+    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed" << endl;
+
+    //copy vectors to GPU
+    cudaStatus = cudaMemcpy(dev_a, a, total_size, cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) cout << "Copying to device failed" << endl;
+
+    //launch kernel
+    sigmoidKernel << <(size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >> > (dev_a, size);
+
+    //check if errors
+    cudaStatus = cudaGetLastError();
+    if (cudaStatus != cudaSuccess) cout << "Launching kernel failed" << endl;
+
+
+    //synchronize devices
+    cudaStatus = cudaDeviceSynchronize();
+    if (cudaStatus != cudaSuccess) cout << "Synchronizing failed" << endl;
+
+    //copy output to host
+    cudaStatus = cudaMemcpy(a, dev_a, total_size, cudaMemcpyDeviceToHost);
+    if (cudaStatus != cudaSuccess) cout << "Copying to host failed" << endl;
+
+    //free memory
+    cudaFree(dev_a);
+
+    //reset the device
+    cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
+
+    return cudaStatus;
+}
+
+template <typename Y>
+cudaError_t CUDA_Class<Y>::sigmoid_derivative(Y* a, unsigned int size) {
+    //variables
+    cudaError_t cudaStatus;
+    unsigned int total_size = size * sizeof(Y);
+
+    Y* dev_a = 0;
+
+    //set the device
+    cudaStatus = cudaSetDevice(0);
+    if (cudaStatus != cudaSuccess) cout << "Setting device failed" << endl;
+
+    //allocate memory
+    cudaStatus = cudaMalloc((void**)&dev_a, total_size);
+    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed" << endl;
+
+    //copy vectors to GPU
+    cudaStatus = cudaMemcpy(dev_a, a, total_size, cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) cout << "Copying to device failed" << endl;
+
+    //launch kernel
+    sigmoid_derivativeKernel << <(size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >> > (dev_a, size);
+
+    //check if errors
+    cudaStatus = cudaGetLastError();
+    if (cudaStatus != cudaSuccess) cout << "Launching kernel failed" << endl;
+
+
+    //synchronize devices
+    cudaStatus = cudaDeviceSynchronize();
+    if (cudaStatus != cudaSuccess) cout << "Synchronizing failed" << endl;
+
+    //copy output to host
+    cudaStatus = cudaMemcpy(a, dev_a, total_size, cudaMemcpyDeviceToHost);
+    if (cudaStatus != cudaSuccess) cout << "Copying to host failed" << endl;
+
+    //free memory
+    cudaFree(dev_a);
+
+    //reset the device
+    cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
+
+    return cudaStatus;
+}
+
+template <typename Y>
+cudaError_t CUDA_Class<Y>::square(Y* a, unsigned int size) {
+    //variables
+    cudaError_t cudaStatus;
+    unsigned int total_size = size * sizeof(Y);
+
+    Y* dev_a = 0;
+
+    //set the device
+    cudaStatus = cudaSetDevice(0);
+    if (cudaStatus != cudaSuccess) cout << "Setting device failed" << endl;
+
+    //allocate memory
+    cudaStatus = cudaMalloc((void**)&dev_a, total_size);
+    if (cudaStatus != cudaSuccess) cout << "Memory alloc failed" << endl;
+
+    //copy vectors to GPU
+    cudaStatus = cudaMemcpy(dev_a, a, total_size, cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) cout << "Copying to device failed" << endl;
+
+    //launch kernel
+    squareKernel << <(size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >> > (dev_a, size);
 
     //check if errors
     cudaStatus = cudaGetLastError();
