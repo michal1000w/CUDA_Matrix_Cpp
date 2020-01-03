@@ -144,7 +144,7 @@ public:
     void set_threads_per_block(unsigned int threads = 512) { this->THREADS_PER_BLOCK = threads; }
 
 private:
-    unsigned int THREADS_PER_BLOCK = 32;
+    unsigned int THREADS_PER_BLOCK = 512;
 };
 
 //////////////////////////LAUNCH FUNCTIONS//////////////////
