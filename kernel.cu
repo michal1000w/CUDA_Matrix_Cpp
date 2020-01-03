@@ -72,7 +72,7 @@ int main() {
     */
 
     /////MATRIX CLASS
-    Matrix<float> mat, mat2;
+    CMatrix<float> mat, mat2;
     /*
     mat.add("[1,2,3][4,5,6]");
     mat2.add("[1,2,3][4,5,6]");
@@ -116,13 +116,13 @@ int main() {
     mat.add("[1,2,3]");
     mat2.add("[1,0][2,2][3,0]");
 
-    /*
+    
     mat = mat.dot(mat2) * 5;
     mat.print();
     cout << endl;
     mat.T().print();
     mat.sigmoid().print();
-    */
+    
 
     mat.square().print();
 

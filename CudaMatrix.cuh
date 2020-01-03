@@ -28,7 +28,7 @@ void deletea(Y*& ptr) {
     }
 }
 template <typename Y>
-class Matrix;
+class CMatrix;
 
 //////////////////////////////////////////////////KERNELS//////////////////////////////////////////////////////
 
@@ -62,56 +62,56 @@ void transposeKernel(Y* mat_in, Y* mat_out, yeet rows, yeet cols) {
 
 //////////////////////////////////////////////////CLASS////////////////////////////////////////////////////////
 template<typename Y>
-class Matrix {
+class CMatrix {
 public:
     typedef Y value_type;
-    Matrix() : _cols(0), _rows(0), _data(new Y[0]) {};
-    Matrix(yeet rows, yeet cols);
+    CMatrix() : _cols(0), _rows(0), _data(new Y[0]) {};
+    CMatrix(yeet rows, yeet cols);
     //new
-    Matrix(yeet, yeet, mutable Y*);
-    Matrix(yeet, yeet, vector<Y>);
-    Matrix(const std::string&);
-    Matrix(const Matrix<Y>&);
+    CMatrix(yeet, yeet, mutable Y*);
+    CMatrix(yeet, yeet, vector<Y>);
+    CMatrix(const std::string&);
+    CMatrix(const CMatrix<Y>&);
 
     bool exists(yeet row, yeet col) const;
     Y& operator()(yeet row, yeet col);
     Y operator()(yeet row, yeet col) const;
-    Matrix<Y> operator=(const Matrix<Y>&);
-    virtual ~Matrix();
+    CMatrix<Y> operator=(const CMatrix<Y>&);
+    virtual ~CMatrix();
 
-    //friend void dotKernel(const Matrix<Y>* A, const Matrix<Y>* B, Matrix<Y>* C);
+    //friend void dotKernel(const CMatrix<Y>* A, const CMatrix<Y>* B, CMatrix<Y>* C);
 
 
     /////NOWE
-    Matrix<Y> operator+=(const Matrix<Y>&);
-    Matrix<Y> operator+=(const Y&);
-    Matrix<Y> operator-=(const Matrix<Y>&);
-    Matrix<Y> operator-=(const Y&);
-    Matrix<Y> operator*=(const Matrix<Y>&);
-    Matrix<Y> operator*=(const Y&);
-    Matrix<Y> operator/=(const Y&);
+    CMatrix<Y> operator+=(const CMatrix<Y>&);
+    CMatrix<Y> operator+=(const Y&);
+    CMatrix<Y> operator-=(const CMatrix<Y>&);
+    CMatrix<Y> operator-=(const Y&);
+    CMatrix<Y> operator*=(const CMatrix<Y>&);
+    CMatrix<Y> operator*=(const Y&);
+    CMatrix<Y> operator/=(const Y&);
 
     //Dodatkowe
-    Matrix<Y> operator+(const Matrix<Y>&);
-    Matrix<Y> operator-(const Matrix<Y>&);
-    Matrix<Y> operator*(const Matrix<Y>&);
-    Matrix<Y> operator*(const Y&);
-    Matrix<Y> operator/(const Y&);
+    CMatrix<Y> operator+(const CMatrix<Y>&);
+    CMatrix<Y> operator-(const CMatrix<Y>&);
+    CMatrix<Y> operator*(const CMatrix<Y>&);
+    CMatrix<Y> operator*(const Y&);
+    CMatrix<Y> operator/(const Y&);
 
-    Matrix<Y> dot(const Matrix<Y>&);
-    Matrix<Y> T();
+    CMatrix<Y> dot(const CMatrix<Y>&);
+    CMatrix<Y> T();
 
-    Matrix<Y> sigmoid();
-    Matrix<Y> sigmoid_derivative();
+    CMatrix<Y> sigmoid();
+    CMatrix<Y> sigmoid_derivative();
 
     double mean(); //for now works only on CPU //todo gpu compute
-    Matrix<Y> square();
+    CMatrix<Y> square();
 
 
-    //friend inline Matrix<Y>& sigmoid(const Matrix<Y>& m);
-    //friend inline Matrix<Y>& sigmoid_derivative(const Matrix<Y>& m);
+    //friend inline CMatrix<Y>& sigmoid(const CMatrix<Y>& m);
+    //friend inline CMatrix<Y>& sigmoid_derivative(const CMatrix<Y>& m);
 
-    Matrix<Y> print(short round = (short)5);
+    CMatrix<Y> print(short round = (short)5);
     void add(std::string);
     std::string getString(bool is_int = false);
 
@@ -138,7 +138,7 @@ private:
             output *= 10;
         return output;
     }
-    void initMatrix() {
+    void initCMatrix() {
         this->_data = new Y[size()];
         //for (yeet i = 0; i < size(); i++) this->_data[i] = 0.0;
         Cuda.cset(this->_data, 0.0, size());
@@ -154,32 +154,32 @@ public:
 
 //////////////////////////////////////////////////KONSTRUKTORY///////////////////////////////////////////////////////////////
 template<typename Y>
-Matrix<Y>::Matrix(yeet rows, yeet cols) : _rows(rows), _cols(cols) {
-    this->initMatrix();
+CMatrix<Y>::CMatrix(yeet rows, yeet cols) : _rows(rows), _cols(cols) {
+    this->initCMatrix();
 }
 
 template <typename Y>
-Matrix<Y>::Matrix(yeet rows, yeet cols, vector<Y> data) : _rows(rows), _cols(cols) {
-    this->initMatrix();
+CMatrix<Y>::CMatrix(yeet rows, yeet cols, vector<Y> data) : _rows(rows), _cols(cols) {
+    this->initCMatrix();
     for (yeet i = 0; i < data.size(); i++)
         _data[i] = data[i];
 }
 
 template<typename Y>
-Matrix<Y>::Matrix(yeet rows, yeet cols, mutable Y* _data) : _rows(rows), _cols(cols) {
-    this->initMatrix();
+CMatrix<Y>::CMatrix(yeet rows, yeet cols, mutable Y* _data) : _rows(rows), _cols(cols) {
+    this->initCMatrix();
     //for (yeet i = 0; i < size(); i++) this->_data[i] = _data[i];
     Cuda.set(this->_data, _data, size());
 }
 template <typename Y>
-Matrix<Y>::Matrix(const Matrix<Y>& mat) {
+CMatrix<Y>::CMatrix(const CMatrix<Y>& mat) {
     this->_cols = mat._cols;
     this->_rows = mat._rows;
-    this->initMatrix();
+    this->initCMatrix();
     Cuda.set(this->_data, mat._data, this->size());
 }
 template<typename Y>
-Matrix<Y>::Matrix(const std::string& macierz) {
+CMatrix<Y>::CMatrix(const std::string& macierz) {
     //Podzia³ na fragmenty
     yeet len = macierz.length();
     std::string fragment = "";
@@ -222,10 +222,10 @@ Matrix<Y>::Matrix(const std::string& macierz) {
 
     this->_cols = elementy;
 
-    //Inicjowanie nowej macierzy typu Matrix
-    this->initMatrix();
+    //Inicjowanie nowej macierzy typu CMatrix
+    this->initCMatrix();
 
-    //Przenoszenie elementów z vector do macierzy typu Matrix
+    //Przenoszenie elementów z vector do macierzy typu CMatrix
     yeet i = 0;
     for (yeet y = 0; y < this->_rows; y++) {
         for (yeet x = 0; x < this->_cols; x++) {
@@ -241,12 +241,12 @@ Matrix<Y>::Matrix(const std::string& macierz) {
 
 //////////////////////////////////////////////////DESTRUKTOR///////////////////////////////////////////////////////////////
 template<typename Y>
-Matrix<Y>::~Matrix() {
+CMatrix<Y>::~CMatrix() {
     this->free(); //tutaj
 }
 //////////////////////////////////////////////////DODATKOWE///////////////////////////////////////////////////////////////
 template<typename Y>
-Matrix<Y> Matrix<Y>::print(short roundness) {
+CMatrix<Y> CMatrix<Y>::print(short roundness) {
     int pomocnicza = 0;
     roundness = (roundness < 5 ? roundness : 4);
     for (yeet i = 0; i < this->_rows; i++) {
@@ -265,9 +265,9 @@ Matrix<Y> Matrix<Y>::print(short roundness) {
 }
 
 template <typename Y>
-std::string Matrix<Y>::getString(bool is_int) {
+std::string CMatrix<Y>::getString(bool is_int) {
     std::string data = "";
-    Matrix<Y> temp(*this);
+    CMatrix<Y> temp(*this);
     for (int i = 0; i < this->_rows; i++) {
         data += "[";
         for (int j = 0; j < this->_cols; j++) {
@@ -282,12 +282,12 @@ std::string Matrix<Y>::getString(bool is_int) {
 }
 
 template<typename Y>
-bool Matrix<Y>::exists(yeet row, yeet col) const {
+bool CMatrix<Y>::exists(yeet row, yeet col) const {
     return (row < _rows && col < _cols);
 }
 
 template<typename Y>
-void Matrix<Y>::free() {
+void CMatrix<Y>::free() {
     for (yeet i = 0, c = size(); i < c; ++i) {
         //will do nothing if Y isn't a pointer
         deletep(_data[i]);
@@ -296,7 +296,7 @@ void Matrix<Y>::free() {
 }
 
 template <typename Y>
-void Matrix<Y>::add(std::string macierz) {
+void CMatrix<Y>::add(std::string macierz) {
     //Podzia³ na fragmenty
     yeet len = macierz.length();
     std::string fragment = "";
@@ -342,10 +342,10 @@ void Matrix<Y>::add(std::string macierz) {
     //czyszczenie starej macierzy
     this->free();
 
-    //Inicjowanie nowej macierzy typu Matrix
-    this->initMatrix();
+    //Inicjowanie nowej macierzy typu CMatrix
+    this->initCMatrix();
 
-    //Przenoszenie elementów z vector do macierzy typu Matrix
+    //Przenoszenie elementów z vector do macierzy typu CMatrix
     yeet i = 0;
     for (yeet y = 0; y < this->_rows; y++) {
         for (yeet x = 0; x < this->_cols; x++) {
@@ -364,92 +364,92 @@ void Matrix<Y>::add(std::string macierz) {
 ///////////////////////////////////////////////////////////////OPERATORY//////////////////////////////////////////////////////////////
 /////////////////Operatory//////////////////////////////////////
 template <typename Y>
-Y& Matrix<Y>::operator()(yeet row, yeet col) {
+Y& CMatrix<Y>::operator()(yeet row, yeet col) {
     return _data[_cols * row + col];
 }
 
 template <typename Y>
-Y Matrix<Y>::operator()(yeet row, yeet col) const {
+Y CMatrix<Y>::operator()(yeet row, yeet col) const {
     return _data[_cols * row + col];
 }
 
 template<typename Y>
-Matrix<Y> Matrix<Y>::operator=(const Matrix<Y>& rhs) {
+CMatrix<Y> CMatrix<Y>::operator=(const CMatrix<Y>& rhs) {
     this->free();
 
     this->_rows = rhs._rows;
     this->_cols = rhs._cols;
 
-    this->initMatrix();
+    this->initCMatrix();
     Cuda.set(this->_data, rhs._data, this->size());
 
     return *this;
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator+=(const Matrix<Y>& rhs) {
+CMatrix<Y> CMatrix<Y>::operator+=(const CMatrix<Y>& rhs) {
     Cuda.add(this->_data, rhs._data, this->size());
     return *this;
 }
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator+=(const Y& rhs) {
+CMatrix<Y> CMatrix<Y>::operator+=(const Y& rhs) {
     Cuda.cadd(this->_data, rhs, this->size());
     return *this;
 }
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator-=(const Matrix<Y>& rhs) {
+CMatrix<Y> CMatrix<Y>::operator-=(const CMatrix<Y>& rhs) {
     Cuda.subtract(this->_data, rhs._data, this->size());
     return *this;
 }
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator-=(const Y& rhs) {
+CMatrix<Y> CMatrix<Y>::operator-=(const Y& rhs) {
     Cuda.csubtract(this->_data, rhs, this->size());
     return *this;
 }
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator*=(const Matrix<Y>& rhs) {
+CMatrix<Y> CMatrix<Y>::operator*=(const CMatrix<Y>& rhs) {
     Cuda.multiply(this->_data, rhs._data, this->size());
     return *this;
 }
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator*=(const Y& rhs) {
+CMatrix<Y> CMatrix<Y>::operator*=(const Y& rhs) {
     Cuda.cmultiply(this->_data, rhs, this->size());
     return *this;
 }
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator/=(const Y& rhs) {
+CMatrix<Y> CMatrix<Y>::operator/=(const Y& rhs) {
     Cuda.cdivide(this->_data, rhs, this->size());
     return *this;
 }
 
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator+(const Matrix<Y>& rhs) {
-    Matrix<Y> temp(*this);
+CMatrix<Y> CMatrix<Y>::operator+(const CMatrix<Y>& rhs) {
+    CMatrix<Y> temp(*this);
     return temp += rhs;
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator-(const Matrix<Y>& rhs) {
-    Matrix<Y> temp(*this);
+CMatrix<Y> CMatrix<Y>::operator-(const CMatrix<Y>& rhs) {
+    CMatrix<Y> temp(*this);
     return temp -= rhs;
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator*(const Matrix<Y>& rhs) {
-    Matrix<Y> temp(*this);
+CMatrix<Y> CMatrix<Y>::operator*(const CMatrix<Y>& rhs) {
+    CMatrix<Y> temp(*this);
     return temp *= rhs;
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator*(const Y& rhs) {
-    Matrix<Y> temp(*this);
+CMatrix<Y> CMatrix<Y>::operator*(const Y& rhs) {
+    CMatrix<Y> temp(*this);
     return temp *= rhs;
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::operator/(const Y& rhs) {
-    Matrix<Y> temp(*this);
+CMatrix<Y> CMatrix<Y>::operator/(const Y& rhs) {
+    CMatrix<Y> temp(*this);
     return temp /= rhs;
 }
 
@@ -459,7 +459,7 @@ Matrix<Y> Matrix<Y>::operator/(const Y& rhs) {
 
 ///////////////////////////////////////////////////////MATEMATYCZNE///////////////////////////////////////////////////////////
 template <typename Y>
-Matrix<Y> Matrix<Y>::dot(const Matrix<Y>& rhs) {
+CMatrix<Y> CMatrix<Y>::dot(const CMatrix<Y>& rhs) {
     //variables
     cudaError_t cudaStatus;
     unsigned int total_size_a = size() * sizeof(Y);
@@ -522,8 +522,8 @@ Matrix<Y> Matrix<Y>::dot(const Matrix<Y>& rhs) {
     cudaStatus = cudaDeviceReset();
     if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
 
-    //create output Matrix
-    Matrix<Y> C(this->_rows, rhs._cols, host_c);
+    //create output CMatrix
+    CMatrix<Y> C(this->_rows, rhs._cols, host_c);
 
     delete[] host_c;
 
@@ -531,7 +531,7 @@ Matrix<Y> Matrix<Y>::dot(const Matrix<Y>& rhs) {
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::T() {
+CMatrix<Y> CMatrix<Y>::T() {
     //variables
     cudaError_t cudaStatus;
     unsigned int total_size = size() * sizeof(Y);
@@ -582,8 +582,8 @@ Matrix<Y> Matrix<Y>::T() {
     cudaStatus = cudaDeviceReset();
     if (cudaStatus != cudaSuccess) cout << "Resetting device failed" << endl;
 
-    //create output Matrix
-    Matrix<Y> C(this->_cols, this->_rows, host_c);
+    //create output CMatrix
+    CMatrix<Y> C(this->_cols, this->_rows, host_c);
 
     delete[] host_c;
 
@@ -591,28 +591,28 @@ Matrix<Y> Matrix<Y>::T() {
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::sigmoid() {
-    Matrix<Y> output(*this);
+CMatrix<Y> CMatrix<Y>::sigmoid() {
+    CMatrix<Y> output(*this);
     Cuda.sigmoid(output._data, size());
     return output;
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::sigmoid_derivative() {
-    Matrix<Y> output(*this);
+CMatrix<Y> CMatrix<Y>::sigmoid_derivative() {
+    CMatrix<Y> output(*this);
     Cuda.sigmoid_derivative(output._data, size());
     return output;
 }
 
 template <typename Y>
-Matrix<Y> Matrix<Y>::square() {
-    Matrix<Y> output(*this);
+CMatrix<Y> CMatrix<Y>::square() {
+    CMatrix<Y> output(*this);
     Cuda.square(output._data, size());
     return output;
 }
 
 template <typename Y>
-double Matrix<Y>::mean() {   ///this works on CPU only //todo
+double CMatrix<Y>::mean() {   ///this works on CPU only //todo
     Y output = 0.0;
     Y count = this->size();
     Y suma = 0.0;
