@@ -1,3 +1,6 @@
+#ifndef __CUDA_CLASS__
+#define __CUDA_CLASS__
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
@@ -722,3 +725,5 @@ cudaError_t CUDA_Class<Y>::square(Y* a, unsigned int size) {
 
     return cudaStatus;
 }
+
+#endif

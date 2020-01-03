@@ -1,3 +1,7 @@
+#ifndef __CUDA_MATRIX__
+#define __CUDA_MATRIX__
+
+
 #include "CUDA_Class.cuh";
 
 #include <vector>
@@ -624,3 +628,5 @@ double Matrix<Y>::mean() {   ///this works on CPU only //todo
 
     return output;
 }
+
+#endif
