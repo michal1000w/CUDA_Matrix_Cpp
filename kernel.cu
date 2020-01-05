@@ -98,9 +98,24 @@ int main() {
     mat.dot(mat2).print();
     mat.T().print();
 
+    mat = CuMatrix<float>(256,512);
+    mat2 = CuMatrix<float>(512,678);
+    //for
+    for (int i = 0; i < 1000; i++) {
+        mat + mat - mat * 2;
+        mat.dot(mat2).T();
+    }
+
+    mat.getString();
+    float* a = mat.getArray();
+    mat.mean();
+
+    delete[] a;
 
     ///sprawdzanie czasu
     auto stop = std::chrono::steady_clock::now();
     print_time(start, stop);
+
+    system("pause");
     return 0;
 }
